@@ -1,47 +1,53 @@
-const translate = require('./translate');
+const puppeteer = require('puppeteer');
 
-async function main() {
+async function translate({ detect = 'auto', text, target }) {
+  if (!text || !target) {
+    throw new Error('Text and target language are required');
+  }
+
+  const encodedText = encodeURIComponent(text);
+  const url = `https://translate.google.com/?sl=${encodeURIComponent(detect)}&tl=${encodeURIComponent(target)}&text=${encodedText}&op=translate`;
+
+  const browser = await puppeteer.launch({ headless: 'new' });
   try {
-    // Test 1: Basic translation to Arabic
-    console.log('Test 1: Basic translation to Arabic');
-    const result1 = await translate({ text: 'how are you', target: 'ar' });
-    console.log('Result:', result1);
+    const page = await browser.newPage();
 
-    // Test 2: Basic translation to Spanish
-    console.log('\nTest 2: Basic translation to Spanish');
-    const result2 = await translate({ detect: 'en', text: 'Good morning', target: 'es' });
-    console.log('Result:', result2);
+    await page.goto(url, { waitUntil: 'networkidle2' });
 
-    // Test 3: Empty text
-    console.log('\nTest 3: Empty text');
-    try {
-      await translate({ text: '', target: 'ar' });
-    } catch (error) {
-      console.log('Result:', error.message);
+    // Try multiple selectors
+    const selectors = [
+      'span.ryNqvb',                    
+      'span[jsname="V67aGc"].VfPpkd-vQzf8d', 
+      'div.HwtZe span',                 
+      'span[class*="translation"]'       
+    ];
+
+    let translatedText = null;
+    for (const selector of selectors) {
+      try {
+        await page.waitForSelector(selector, { timeout: 10000 });
+        // Scrape all matching elements and combine their text
+        const texts = await page.$$eval(selector, els => els.map(el => el.textContent.trim()).filter(text => text && text !== 'Test'));
+        if (texts.length > 0) {
+          translatedText = texts.join(' ');
+          break; // Found valid translation, exit loop
+        }
+      } catch (err) {
+        console.log(`Selector ${selector} failed: ${err.message}`);
+      }
     }
 
-    // Test 4: Invalid target language
-    console.log('\nTest 4: Invalid target language');
-    try {
-      await translate({ text: 'how are you', target: 'xyz' });
-    } catch (error) {
-      console.log('Result:', error.message);
+    if (!translatedText || translatedText === 'Test') {
+      throw new Error(`Translation not found. Tried selectors: ${selectors.join(', ')}`);
     }
 
-    // Test 5: Long text
-    console.log('\nTest 5: Long text');
-    const longText = 'This is a very long sentence to test if the translation package can handle extended text inputs without breaking.';
-    const result5 = await translate({ text: longText, target: 'fr' });
-    console.log('Result:', result5);
-
-    // Test 6: Special characters
-    console.log('\nTest 6: Special characters');
-    const specialText = 'Hello! @#$% How are you? 😊';
-    const result6 = await translate({ text: specialText, target: 'hi' });
-    console.log('Result:', result6);
+    return translatedText;
   } catch (error) {
-    console.error('Error:', error.message);
+    console.error('Translation error:', error);
+    throw error;
+  } finally {
+    await browser.close();
   }
 }
 
-main();
+module.exports = translate;
