@@ -1,6 +1,6 @@
 {
   "name": "googl_translate",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A package to translate text to multiple languages",
   "keywords": [
     "translate",
@@ -20,9 +20,9 @@
   "type": "commonjs",
   "main": "index.js",
   "files": [
-  "index.js",
-  "README.md"
-],
+    "index.js",
+    "README.md"
+  ],
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
