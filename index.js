@@ -6,34 +6,79 @@ async function translate({ detect = 'auto', text, target }) {
   }
 
   const encodedText = encodeURIComponent(text);
-  const url = `https://translate.google.com/?sl=${encodeURIComponent(detect)}&tl=${encodeURIComponent(target)}&text=${encodedText}&op=translate`;
+  let result = { detect: 'success', translated_text: '' };
+  let url = `https://translate.google.com/?sl=${encodeURIComponent(detect)}&tl=${encodeURIComponent(target)}&text=${encodedText}&op=translate`;
 
   const browser = await puppeteer.launch({ headless: 'new' });
   try {
     const page = await browser.newPage();
-
     await page.goto(url, { waitUntil: 'networkidle2' });
 
-    // Try multiple selectors
+    // Get detected source language
+    let detectedLanguage = '';
+    try {
+      detectedLanguage = await page.$eval('[data-language-code][aria-selected="true"]', el => el.getAttribute('data-language-code') || 'auto');
+    } catch (err) {
+      detectedLanguage = 'unknown';
+    }
+
     const selectors = [
-      'span.ryNqvb',                    
-      'span[jsname="V67aGc"].VfPpkd-vQzf8d', 
-      'div.HwtZe span',                 
-      'span[class*="translation"]'       
+      'span.ryNqvb',
+      'span[jsname="V67aGc"].VfPpkd-vQzf8d',
+      'div.HwtZe span',
+      'span[class*="translation"]'
     ];
 
     let translatedText = null;
     for (const selector of selectors) {
       try {
         await page.waitForSelector(selector, { timeout: 10000 });
-        // Scrape all matching elements and combine their text
         const texts = await page.$$eval(selector, els => els.map(el => el.textContent.trim()).filter(text => text && text !== 'Test'));
         if (texts.length > 0) {
           translatedText = texts.join(' ');
-          break; // Found valid translation, exit loop
+          break;
         }
       } catch (err) {
-        console.log(`Selector ${selector} failed: ${err.message}`);
+        // Silently continue to next selector
+      }
+    }
+
+    // Check if provided detect language matches and translation is valid
+    if (detect !== 'auto' && detectedLanguage !== detect) {
+      result.detect = 'fail';
+      url = `https://translate.google.com/?sl=auto&tl=${encodeURIComponent(target)}&text=${encodedText}&op=translate`;
+      await page.goto(url, { waitUntil: 'networkidle2' });
+
+      translatedText = null;
+      for (const selector of selectors) {
+        try {
+          await page.waitForSelector(selector, { timeout: 10000 });
+          const texts = await page.$$eval(selector, els => els.map(el => el.textContent.trim()).filter(text => text && text !== 'Test'));
+          if (texts.length > 0) {
+            translatedText = texts.join(' ');
+            break;
+          }
+        } catch (err) {
+          // Silently continue to next selector
+        }
+      }
+    } else if (!translatedText || translatedText === text && detect !== target) {
+      result.detect = 'fail';
+      url = `https://translate.google.com/?sl=auto&tl=${encodeURIComponent(target)}&text=${encodedText}&op=translate`;
+      await page.goto(url, { waitUntil: 'networkidle2' });
+
+      translatedText = null;
+      for (const selector of selectors) {
+        try {
+          await page.waitForSelector(selector, { timeout: 10000 });
+          const texts = await page.$$eval(selector, els => els.map(el => el.textContent.trim()).filter(text => text && text !== 'Test'));
+          if (texts.length > 0) {
+            translatedText = texts.join(' ');
+            break;
+          }
+        } catch (err) {
+          // Silently continue to next selector
+        }
       }
     }
 
@@ -41,9 +86,9 @@ async function translate({ detect = 'auto', text, target }) {
       throw new Error(`Translation not found. Tried selectors: ${selectors.join(', ')}`);
     }
 
-    return translatedText;
+    result.translated_text = translatedText;
+    return result;
   } catch (error) {
-    console.error('Translation error:', error);
     throw error;
   } finally {
     await browser.close();
