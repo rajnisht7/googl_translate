@@ -1,0 +1,29 @@
+{
+  "name": "googl_translate",
+  "version": "1.0.0",
+  "description": "A package to translate text to multiple languages",
+  "keywords": [
+    "translate",
+    "google",
+    "language"
+  ],
+  "homepage": "https://github.com/rajnisht7/googl_translate#readme",
+  "bugs": {
+    "url": "https://github.com/rajnisht7/googl_translate/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rajnisht7/googl_translate.git"
+  },
+  "license": "ISC",
+  "author": "rajnisht7",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "axios": "^1.9.0",
+    "puppeteer": "^24.9.0"
+  }
+}
