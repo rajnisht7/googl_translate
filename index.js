@@ -1,6 +1,23 @@
 const puppeteer = require('puppeteer');
 
-async function translate({ detect = 'auto', text, target }) {
+async function translate(...args) {
+
+    let detect = 'auto', text, target;
+
+  
+  // Check argument format
+  if (args.length === 1 && typeof args[0] === 'object') {
+    ({ detect = 'auto', text, target } = args[0]);
+  } else if (args.length === 2) {
+    [text, target] = args;
+    detect = 'auto'; // Default detect to 'auto' for two arguments
+  } else if (args.length === 3) {
+    [detect, text, target] = args;
+  } else {
+    throw new Error('Invalid arguments: Provide { detect, text, target }, (detect, text, target), or (text, target)');
+  }
+
+  
   if (!text || !target) {
     throw new Error('Text and target language are required');
   }

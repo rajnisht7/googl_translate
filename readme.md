@@ -14,11 +14,19 @@ npm install googl_translate
 const translate = require("googl_translate");
 
 async function test() {
-  const result = await translate({ text: "Hello", target: "es" });
+  // argument as object
+  const result = await translate({ text: "Hello", target: "es" }); 
+  
+
   console.log(result); // Output: { detect: 'success', translated_text: 'Hola' }
+
+
+  // simple arguments
+  console.log(await translate( 'How are you',"de")); // Output: { detect: 'success', translated_text: 'Wie geht es dir' }
 }
 
 //The result will be in json format detect - tells us if the given text is in the language as given in detect it will be always success for auto
+
 
 test();
 ```
